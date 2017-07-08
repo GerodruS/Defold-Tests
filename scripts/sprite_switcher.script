@@ -1,0 +1,15 @@
+local max_x = 960
+
+function init(self)
+  msg.post('#', 'acquire_input_focus')
+end
+
+function on_input(self, action_id, action)
+  if action_id == hash('tap') and action.released then
+    if action.x < max_x * 0.5 then
+      msg.post('.', 'decrease')
+    else
+      msg.post('.', 'increase')
+    end
+  end
+end

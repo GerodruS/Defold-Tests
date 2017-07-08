@@ -1,0 +1,39 @@
+local start_count = 100
+local max_count = 1000
+local delta = 100
+
+local max_x = 960
+local max_y = 640
+
+local function create(self)
+  local position = vmath.vector3(math.random(max_x), math.random(max_y), 0)
+  local object = factory.create(self.factory_url, position)
+  table.insert(self.objects_list, object)
+end
+
+function init(self)
+  self.factory_url = msg.url('#factory')
+  self.objects_list = {}
+  for i = 1, start_count do
+    create(self)
+  end
+end
+
+function on_message(self, message_id, message, sender)
+  if message_id == hash('increase') then
+    if table.maxn(self.objects_list) < max_count then
+      for i = 1, delta do
+        create(self)
+      end
+    end
+
+  elseif message_id == hash('decrease') then
+    if delta <= table.maxn(self.objects_list) then
+      for i = 1, delta do
+        go.delete(self.objects_list[1])
+        table.remove(self.objects_list, 1)
+      end
+    end
+
+  end
+end

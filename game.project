@@ -1,0 +1,21 @@
+[project]
+title = Defold-Test
+
+[bootstrap]
+main_collection = /main/sprites.collectionc
+
+[display]
+variable_dt = 1
+
+[android]
+package = com.tests.defold
+
+[sprite]
+max_count = 16384
+
+[ios]
+bundle_identifier = com.tests.defold
+
+[collection]
+max_instances = 16384
+

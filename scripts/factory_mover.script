@@ -1,0 +1,76 @@
+local start_count = 100
+local max_count = 1000
+local delta = 100
+
+local min_x = 0
+local min_y = 0
+
+local max_x = 960
+local max_y = 640
+
+local min_velocity = 100
+local max_velocity = 300
+
+local function create(self)
+  local position = vmath.vector3(math.random(max_x), math.random(max_y), 0)
+  local object = factory.create(self.factory_url, position)
+  local direction = vmath.vector3(math.random() - 0.5, math.random() - 0.5, 0)
+  direction = vmath.normalize(direction) * math.random(min_velocity, max_velocity)
+  table.insert(self.objects_list, {
+    id = object,
+    direction = direction
+  })
+end
+
+local function move(self, id, direction, dt)
+  local position = go.get_position(id)
+  position = position + direction * dt
+
+  if position.x < min_x and direction.x < 0 then
+    direction.x = -direction.x
+  end
+  if max_x < position.x and 0 < direction.x then
+    direction.x = -direction.x
+  end
+  if position.y < min_y and direction.y < 0 then
+    direction.y = -direction.y
+  end
+  if max_y < position.y and 0 < direction.y then
+    direction.y = -direction.y
+  end
+
+  go.set_position(position, id)
+end
+
+function init(self)
+  self.factory_url = msg.url('#factory')
+  self.objects_list = {}
+  for i = 1, start_count do
+    create(self)
+  end
+end
+
+function update(self, dt)
+  for _, object in ipairs(self.objects_list) do
+    move(self, object.id, object.direction, dt)
+  end
+end
+
+function on_message(self, message_id, message, sender)
+  if message_id == hash('increase') then
+    if table.maxn(self.objects_list) < max_count then
+      for i = 1, delta do
+        create(self)
+      end
+    end
+
+  elseif message_id == hash('decrease') then
+    if delta <= table.maxn(self.objects_list) then
+      for i = 1, delta do
+        go.delete(self.objects_list[1].id)
+        table.remove(self.objects_list, 1)
+      end
+    end
+
+  end
+end
