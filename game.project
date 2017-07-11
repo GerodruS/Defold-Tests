@@ -19,3 +19,6 @@ bundle_identifier = com.tests.defold
 [collection]
 max_instances = 16384
 
+[input]
+game_binding = /input/game.input_bindingc
+
