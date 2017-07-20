@@ -5,6 +5,7 @@
 
 // include the Defold SDK
 #include <dmsdk/sdk.h>
+#include <chrono>
 
 struct Listener {
 	Listener() {
@@ -26,6 +27,7 @@ struct Timer {
 static unsigned int g_SequenceId = 0;
 static const int TIMERS_CAPACITY = 128;
 static dmArray<Timer*> g_Timers;
+std::chrono::time_point<std::chrono::system_clock> g_StartTime;
 
 /**
  * Create a listener instance from a function on the stack
@@ -147,6 +149,7 @@ dmExtension::Result AppInitializeTimerExtension(dmExtension::AppParams* params) 
 dmExtension::Result InitializeTimerExtension(dmExtension::Params* params) {
 	LuaInit(params->m_L);
 	printf("Registered %s Extension\n", MODULE_NAME);
+	g_StartTime = std::chrono::system_clock::now();
 	return dmExtension::RESULT_OK;
 }
 
@@ -154,8 +157,23 @@ dmExtension::Result AppFinalizeTimerExtension(dmExtension::AppParams* params) {
 	return dmExtension::RESULT_OK;
 }
 
+unsigned long long g_PreviousTime = 0;
+
 dmExtension::Result UpdateTimerExtension(dmExtension::Params* params)
 {
+printf("UpdateTimerExtension\n");
+	/*
+	auto currentTime = std::chrono::system_clock::now();
+	auto duration = currentTime - g_StartTime;
+	auto ms = std::chrono::duration_cast< std::chrono::milliseconds >(duration);
+	auto ns = std::chrono::duration_cast< std::chrono::nanoseconds >(duration);
+	auto timeInt = ns.count();
+	double dt = (timeInt - g_PreviousTime) / 1000000000.0;
+	g_PreviousTime = timeInt;
+	printf("1 UpdateTimerExtension %lld %d\n", ns.count(), ms.count());
+
+	printf("2 UpdateTimerExtension %lld\n", (long long)std::time(nullptr));
+
 	for (int i = g_Timers.Size() - 1; i >= 0; i--) {
 		Timer* timer = g_Timers[i];
 		if (timer) {
@@ -169,7 +187,7 @@ dmExtension::Result UpdateTimerExtension(dmExtension::Params* params)
 			if (!dmScript::IsInstanceValid(L)) {
 				lua_pop(L, 2);
 			} else {
-				lua_pushinteger(L, timer->id);
+				lua_pushnumber(L, dt);
 				int ret = lua_pcall(L, 2, LUA_MULTRET, 0);
 				if (ret != 0) {
 					dmLogError("Error running timer callback: %s", lua_tostring(L, -1));
@@ -179,6 +197,7 @@ dmExtension::Result UpdateTimerExtension(dmExtension::Params* params)
 			assert(top == lua_gettop(L));
 		}
 	}
+	*/
 
 	return dmExtension::RESULT_OK;
 }
