@@ -5,34 +5,60 @@
 
 // include the Defold SDK
 #include <dmsdk/sdk.h>
-#include <chrono>
+
+#ifdef DM_PLATFORM_WINDOWS
+#include <windows.h>
+// Timestamp calculation from luasocket timeout.c
+static double GetTimestamp(void)
+{
+	FILETIME ft;
+	double t;
+
+	GetSystemTimeAsFileTime(&ft);
+	/* Windows file time (time since January 1, 1601 (UTC)) */
+	t = ft.dwLowDateTime / 1.0e7 + ft.dwHighDateTime * (4294967296.0 / 1.0e7);
+	/* convert to Unix Epoch time (time since January 1, 1970 (UTC)) */
+	return t - 11644473600.0;
+}
+#else
+#include <sys/time.h>
+static double GetTimestamp(void)
+{
+	struct timeval v;
+
+	gettimeofday(&v, (struct timezone *)NULL);
+	/* Unix Epoch time (time since January 1, 1970 (UTC)) */
+	return v.tv_sec + v.tv_usec / 1.0e6;
+}
+#endif
 
 struct Listener {
-	Listener() {
+	Listener()
+	{
 		m_L = 0;
 		m_Callback = LUA_NOREF;
 		m_Self = LUA_NOREF;
 	}
-	lua_State* m_L;
-	int        m_Callback;
-	int        m_Self;
+	lua_State *	m_L;
+	int		m_Callback;
+	int		m_Self;
 };
 
 struct Timer {
-	int repeating;
-	unsigned int id;
-	Listener listener;
+	int		repeating;
+	unsigned int	id;
+	Listener	listener;
 };
 
 static unsigned int g_SequenceId = 0;
 static const int TIMERS_CAPACITY = 128;
-static dmArray<Timer*> g_Timers;
-std::chrono::time_point<std::chrono::system_clock> g_StartTime;
+static dmArray<Timer *> g_Timers;
 
 /**
  * Create a listener instance from a function on the stack
  */
-static Listener CreateListener(lua_State* L, int index) {
+static Listener CreateListener(lua_State *L, int index)
+{
 	luaL_checktype(L, index, LUA_TFUNCTION);
 	lua_pushvalue(L, index);
 	int cb = dmScript::Ref(L, LUA_REGISTRYINDEX);
@@ -48,15 +74,16 @@ static Listener CreateListener(lua_State* L, int index) {
 /**
  * Create a new timer
  */
-static Timer* CreateTimer(Listener listener, int repeating) {
-	Timer *timer = (Timer*)malloc(sizeof(Timer));
+static Timer *CreateTimer(Listener listener, int repeating)
+{
+	Timer *timer = (Timer *)malloc(sizeof(Timer));
+
 	timer->id = g_SequenceId++;
 	timer->listener = listener;
 	timer->repeating = repeating;
 
-	if (g_Timers.Full()) {
+	if (g_Timers.Full())
 		g_Timers.SetCapacity(g_Timers.Capacity() + TIMERS_CAPACITY);
-	}
 	g_Timers.Push(timer);
 	return timer;
 }
@@ -64,17 +91,18 @@ static Timer* CreateTimer(Listener listener, int repeating) {
 /**
  * Get a timer
  */
-static Timer* GetTimer(int id) {
+static Timer *GetTimer(int id)
+{
 	for (int i = g_Timers.Size() - 1; i >= 0; i--) {
-		Timer* timer = g_Timers[i];
-		if (timer->id == id) {
+		Timer *timer = g_Timers[i];
+		if (timer->id == id)
 			return timer;
-		}
 	}
 	return 0;
 }
 
-static int Repeating(lua_State* L) {
+static int Repeating(lua_State *L)
+{
 	int top = lua_gettop(L);
 
 	const Listener listener = CreateListener(L, 1);
@@ -87,9 +115,10 @@ static int Repeating(lua_State* L) {
 	return 1;
 }
 
-static void Remove(int id) {
+static void Remove(int id)
+{
 	for (int i = g_Timers.Size() - 1; i >= 0; i--) {
-		Timer* timer = g_Timers[i];
+		Timer *timer = g_Timers[i];
 		if (timer->id == id) {
 			g_Timers.EraseSwap(i);
 			free(timer);
@@ -98,7 +127,8 @@ static void Remove(int id) {
 	}
 }
 
-static int Cancel(lua_State* L) {
+static int Cancel(lua_State *L)
+{
 	int top = lua_gettop(L);
 
 	int id = luaL_checkint(L, 1);
@@ -112,11 +142,12 @@ static int Cancel(lua_State* L) {
 /**
  * Cancel all timers
  */
-static int CancelAll(lua_State* L) {
+static int CancelAll(lua_State *L)
+{
 	int top = lua_gettop(L);
 
 	for (int i = g_Timers.Size() - 1; i >= 0; i--) {
-		Timer* timer = g_Timers[i];
+		Timer *timer = g_Timers[i];
 		g_Timers.EraseSwap(i);
 		free(timer);
 	}
@@ -127,13 +158,14 @@ static int CancelAll(lua_State* L) {
 
 // Functions exposed to Lua
 static const luaL_reg Module_methods[] = {
-	{ "repeating", Repeating },
-	{ "cancel", Cancel },
+	{ "repeating",	Repeating },
+	{ "cancel",	Cancel	  },
 	{ "cancel_all", CancelAll },
-	{ 0, 0 }
+	{ 0,		0	  }
 };
 
-static void LuaInit(lua_State* L) {
+static void LuaInit(lua_State *L)
+{
 	int top = lua_gettop(L);
 
 	luaL_register(L, MODULE_NAME, Module_methods);
@@ -142,42 +174,35 @@ static void LuaInit(lua_State* L) {
 	assert(top == lua_gettop(L));
 }
 
-dmExtension::Result AppInitializeTimerExtension(dmExtension::AppParams* params) {
+dmExtension::Result AppInitializeTimerExtension(dmExtension::AppParams *params)
+{
 	return dmExtension::RESULT_OK;
 }
 
-dmExtension::Result InitializeTimerExtension(dmExtension::Params* params) {
+dmExtension::Result InitializeTimerExtension(dmExtension::Params *params)
+{
 	LuaInit(params->m_L);
 	printf("Registered %s Extension\n", MODULE_NAME);
-	g_StartTime = std::chrono::system_clock::now();
 	return dmExtension::RESULT_OK;
 }
 
-dmExtension::Result AppFinalizeTimerExtension(dmExtension::AppParams* params) {
-	return dmExtension::RESULT_OK;
-}
-
-unsigned long long g_PreviousTime = 0;
-
-dmExtension::Result UpdateTimerExtension(dmExtension::Params* params)
+dmExtension::Result AppFinalizeTimerExtension(dmExtension::AppParams *params)
 {
-printf("UpdateTimerExtension\n");
-	/*
-	auto currentTime = std::chrono::system_clock::now();
-	auto duration = currentTime - g_StartTime;
-	auto ms = std::chrono::duration_cast< std::chrono::milliseconds >(duration);
-	auto ns = std::chrono::duration_cast< std::chrono::nanoseconds >(duration);
-	auto timeInt = ns.count();
-	double dt = (timeInt - g_PreviousTime) / 1000000000.0;
-	g_PreviousTime = timeInt;
-	printf("1 UpdateTimerExtension %lld %d\n", ns.count(), ms.count());
+	return dmExtension::RESULT_OK;
+}
 
-	printf("2 UpdateTimerExtension %lld\n", (long long)std::time(nullptr));
+double g_PreviousTime = 0;
+
+dmExtension::Result UpdateTimerExtension(dmExtension::Params *params)
+{
+	const double currentTime = GetTimestamp();
+	const double dt = currentTime - g_PreviousTime;
+	g_PreviousTime = currentTime;
 
 	for (int i = g_Timers.Size() - 1; i >= 0; i--) {
-		Timer* timer = g_Timers[i];
+		Timer *timer = g_Timers[i];
 		if (timer) {
-			lua_State* L = timer->listener.m_L;
+			lua_State *L = timer->listener.m_L;
 			int top = lua_gettop(L);
 
 			lua_rawgeti(L, LUA_REGISTRYINDEX, timer->listener.m_Callback);
@@ -197,12 +222,13 @@ printf("UpdateTimerExtension\n");
 			assert(top == lua_gettop(L));
 		}
 	}
-	*/
+
 
 	return dmExtension::RESULT_OK;
 }
 
-dmExtension::Result FinalizeTimerExtension(dmExtension::Params* params) {
+dmExtension::Result FinalizeTimerExtension(dmExtension::Params *params)
+{
 	return dmExtension::RESULT_OK;
 }
 
