@@ -246,6 +246,49 @@ dmExtension::Result AppFinalizeTimerExtension(dmExtension::AppParams *params)
 
 double g_PreviousTime = 0;
 
+void PrintPosition(lua_State* L)
+{
+	const int top = lua_gettop(L);
+	lua_getglobal(L, "go");
+	lua_getfield(L, -1, "get_position");
+	if (lua_pcall(L, 0, 1, 0) != 0) {
+		printf("error running function `f2': %s\n", lua_tostring(L, -1));
+	} else {
+		if (!lua_isuserdata(L, -1)) {
+			printf("function `f' must return a userdata\n");
+		} else {
+			double x, y, z;
+
+			lua_getfield(L, -1, "x");
+			if (lua_isnumber(L, -1)) {
+				x = lua_tonumber(L, -1);
+			} else {
+				printf("not a number\n");
+			}
+			lua_pop(L, 1);
+
+			lua_getfield(L, -1, "y");
+			if (lua_isnumber(L, -1)) {
+				y = lua_tonumber(L, -1);
+			} else {
+				printf("not a number\n");
+			}
+			lua_pop(L, 1);
+
+			lua_getfield(L, -1, "z");
+			if (lua_isnumber(L, -1)) {
+				z = lua_tonumber(L, -1);
+			} else {
+				printf("not a number\n");
+			}
+			lua_pop(L, 1);
+
+			printf("x=%f y=%f z=%f\n", x, y, z);
+		}
+	}
+	lua_settop(L, top);
+}
+
 dmExtension::Result UpdateTimerExtension(dmExtension::Params *params)
 {
 	const double currentTime = GetTimestamp();
@@ -276,11 +319,10 @@ dmExtension::Result UpdateTimerExtension(dmExtension::Params *params)
 					printf("error running function `f': %s\n", lua_tostring(L, -1));
 
 				int vectorindex;
-				if (!lua_isuserdata(L, -1)) {
+				if (!lua_isuserdata(L, -1))
 					printf("function `f' must return a userdata\n");
-				} else {
+				else
 					vectorindex = lua_gettop(L);
-				}
 
 				lua_rawgeti(L, LUA_REGISTRYINDEX, timer->listener.m_Callback);
 				lua_rawgeti(L, LUA_REGISTRYINDEX, timer->listener.m_Self);
@@ -302,6 +344,8 @@ dmExtension::Result UpdateTimerExtension(dmExtension::Params *params)
 				}
 
 				lua_settop(L, top2);
+
+				PrintPosition(L);
 			}
 			assert(top == lua_gettop(L));
 		}
