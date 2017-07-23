@@ -294,6 +294,19 @@ void SetPosition(lua_State* L, int vectorIndex)
 	lua_settop(L, top);
 }
 
+void CreateVector3(lua_State* L, double x, double y, double z)
+{
+	lua_getglobal(L, "vmath");
+	lua_getfield(L, -1, "vector3");
+
+	lua_pushnumber(L, x);
+	lua_pushnumber(L, y);
+	lua_pushnumber(L, z);
+
+	if (lua_pcall(L, 3, 1, 0) != 0)
+		printf("error running function `f': %s\n", lua_tostring(L, -1));
+}
+
 dmExtension::Result UpdateTimerExtension(dmExtension::Params *params)
 {
 	const double currentTime = GetTimestamp();
@@ -312,28 +325,15 @@ dmExtension::Result UpdateTimerExtension(dmExtension::Params *params)
 
 			{
 				int top2 = lua_gettop(L);
-				lua_getglobal(L, "vmath");
-				const int vmathindex = lua_gettop(L);
-				lua_getfield(L, vmathindex, "vector3");
 
-				lua_pushnumber(L, movingObject.PositionX);
-				lua_pushnumber(L, movingObject.PositionY);
-				lua_pushnumber(L, 0.0);
-
-				if (lua_pcall(L, 3, 1, 0) != 0)
-					printf("error running function `f': %s\n", lua_tostring(L, -1));
-
-				int vectorindex;
-				if (!lua_isuserdata(L, -1))
-					printf("function `f' must return a userdata\n");
-				else
-					vectorindex = lua_gettop(L);
+				CreateVector3(L, movingObject.PositionX, movingObject.PositionY, 0.0);
+				const int vectorIndex = lua_gettop(L);
 
 				lua_rawgeti(L, LUA_REGISTRYINDEX, timer->listener.m_Self);
 				lua_pushvalue(L, -1);
 				dmScript::SetInstance(L);
 
-				SetPosition(L, vectorindex);
+				SetPosition(L, vectorIndex);
 
 				lua_settop(L, top2);
 			}
