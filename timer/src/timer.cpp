@@ -5,6 +5,8 @@
 
 // include the Defold SDK
 #include <dmsdk/sdk.h>
+#include <stdlib.h>
+#include <math.h>
 
 #ifdef DM_PLATFORM_WINDOWS
 #include <windows.h>
@@ -34,20 +36,71 @@ static double GetTimestamp(void)
 
 struct Listener {
 	Listener()
+		: m_L(0)
+		, m_Callback(LUA_NOREF)
+		, m_Self(LUA_NOREF)
 	{
-		m_L = 0;
-		m_Callback = LUA_NOREF;
-		m_Self = LUA_NOREF;
 	}
 	lua_State *	m_L;
 	int		m_Callback;
 	int		m_Self;
 };
 
+struct MovingObject {
+	MovingObject()
+	{
+		const int maxi = 100;
+		const float maxf = maxi;
+
+		PositionX = (MinX + ((rand() % maxi) / maxf) * (MaxX - MinX));
+		PositionY = (MinY + ((rand() % maxi) / maxf) * (MaxY - MinY));
+
+		DirectionX = ((rand() % maxi) / maxf) - 0.5f;
+		DirectionY = ((rand() % maxi) / maxf) - 0.5f;
+		const float k = sqrtf(DirectionX * DirectionX + DirectionY * DirectionY);
+		DirectionX *= (MinVelocity + ((rand() % maxi) / maxf) * (MaxVelocity - MinVelocity)) / k;
+		DirectionY *= (MinVelocity + ((rand() % maxi) / maxf) * (MaxVelocity - MinVelocity)) / k;
+		// const float speed = MinVelocity + (rand() % (int)(MaxVelocity - MinVelocity));
+		printf("x=%f y=%f\ndx=%f dy=%f\n", PositionX, PositionY, DirectionX, DirectionY);
+	}
+
+	void Refresh(float deltaTime)
+	{
+		PositionX += DirectionX * deltaTime;
+		PositionY += DirectionY * deltaTime;
+
+		if (PositionX < MinX && DirectionX < 0)
+			DirectionX = -DirectionX;
+
+		if (MaxX < PositionX && 0 < DirectionX)
+			DirectionX = -DirectionX;
+
+		if (PositionY < MinY && DirectionY < 0)
+			DirectionY = -DirectionY;
+
+		if (MaxY < PositionY && 0 < DirectionY)
+			DirectionY = -DirectionY;
+	}
+
+	const float	MinX = 0.0f;
+	const float	MaxX = 960.0f;
+	const float	MinY = 0.0f;
+	const float	MaxY = 640.0f;
+	const float	MinVelocity = 100.0f;
+	const float	MaxVelocity = 300.0f;
+
+	float		DirectionX;
+	float		DirectionY;
+
+	float		PositionX;
+	float		PositionY;
+};
+
 struct Timer {
 	int		repeating;
 	unsigned int	id;
 	Listener	listener;
+	MovingObject	movingObject;
 };
 
 static unsigned int g_SequenceId = 0;
@@ -76,7 +129,7 @@ static Listener CreateListener(lua_State *L, int index)
  */
 static Timer *CreateTimer(Listener listener, int repeating)
 {
-	Timer *timer = (Timer *)malloc(sizeof(Timer));
+	Timer *timer = new Timer();
 
 	timer->id = g_SequenceId++;
 	timer->listener = listener;
@@ -203,6 +256,9 @@ dmExtension::Result UpdateTimerExtension(dmExtension::Params *params)
 	for (int i = g_Timers.Size() - 1; i >= 0; i--) {
 		Timer *timer = g_Timers[i];
 		if (timer) {
+			MovingObject& movingObject = timer->movingObject;
+			movingObject.Refresh(dt);
+
 			lua_State *L = timer->listener.m_L;
 			int top = lua_gettop(L);
 
@@ -213,8 +269,11 @@ dmExtension::Result UpdateTimerExtension(dmExtension::Params *params)
 			if (!dmScript::IsInstanceValid(L)) {
 				lua_pop(L, 2);
 			} else {
-				lua_pushnumber(L, dt);
-				int ret = lua_pcall(L, 2, LUA_MULTRET, 0);
+				lua_pushnumber(L, movingObject.PositionX);
+				lua_pushnumber(L, movingObject.PositionY);
+				printf("x=%f y=%f\n", movingObject.PositionX, movingObject.PositionY);
+
+				int ret = lua_pcall(L, 3, LUA_MULTRET, 0);
 				if (ret != 0) {
 					dmLogError("Error running timer callback: %s", lua_tostring(L, -1));
 					lua_pop(L, 1);
