@@ -167,7 +167,7 @@ static void Remove(int id)
 		Timer *timer = g_Timers[i];
 		if (timer->id == id) {
 			g_Timers.EraseSwap(i);
-			free(timer);
+			delete timer;
 			break;
 		}
 	}

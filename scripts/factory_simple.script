@@ -1,6 +1,6 @@
-local start_count = 10
+local start_count = 0
 local max_count = 1000
-local delta = 10
+local delta = 100
 
 local max_x = 960
 local max_y = 640
