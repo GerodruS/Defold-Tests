@@ -262,34 +262,15 @@ dmExtension::Result UpdateTimerExtension(dmExtension::Params *params)
 			lua_State *L = timer->listener.m_L;
 			int top = lua_gettop(L);
 
-			// lua_rawgeti(L, LUA_REGISTRYINDEX, timer->listener.m_Callback);
-			// lua_rawgeti(L, LUA_REGISTRYINDEX, timer->listener.m_Self);
-			// lua_pushvalue(L, -1);
-			// dmScript::SetInstance(L);
-			if (false && !dmScript::IsInstanceValid(L)) {
-				lua_pop(L, 2);
-			} else {
-				// lua_pushnumber(L, movingObject.PositionX);
-				// lua_pushnumber(L, movingObject.PositionY);
-				// printf("x=%f y=%f\n", movingObject.PositionX, movingObject.PositionY);
-				//
-				// int ret = lua_pcall(L, 3, LUA_MULTRET, 0);
-				// if (ret != 0) {
-				//      dmLogError("Error running timer callback: %s", lua_tostring(L, -1));
-				//      lua_pop(L, 1);
-				// }
-
-				//
+			{
 				int top2 = lua_gettop(L);
 				lua_getglobal(L, "vmath");
 				const int vmathindex = lua_gettop(L);
-				//printf("vmathindex=%d\n", vmathindex);
 				lua_getfield(L, vmathindex, "vector3");
-				printf("vector3=%d\n", 69);// lua_gettop(L));
 
 				lua_pushnumber(L, movingObject.PositionX);
 				lua_pushnumber(L, movingObject.PositionY);
-				lua_pushnumber(L, movingObject.PositionX);
+				lua_pushnumber(L, 0.0);
 
 				if (lua_pcall(L, 3, 1, 0) != 0)
 					printf("error running function `f': %s\n", lua_tostring(L, -1));
@@ -299,10 +280,7 @@ dmExtension::Result UpdateTimerExtension(dmExtension::Params *params)
 					printf("function `f' must return a userdata\n");
 				} else {
 					vectorindex = lua_gettop(L);
-					printf("userdata=%d\n", vectorindex);
 				}
-
-				//
 
 				lua_rawgeti(L, LUA_REGISTRYINDEX, timer->listener.m_Callback);
 				lua_rawgeti(L, LUA_REGISTRYINDEX, timer->listener.m_Self);
@@ -314,7 +292,7 @@ dmExtension::Result UpdateTimerExtension(dmExtension::Params *params)
 					// lua_pushuse(L, movingObject.PositionX);
 					// lua_pushnumber(L, movingObject.PositionY);
 					lua_pushvalue(L, vectorindex);
-					printf("x=%f y=%f\n", movingObject.PositionX, movingObject.PositionY);
+					// printf("x=%f y=%f\n", movingObject.PositionX, movingObject.PositionY);
 
 					int ret = lua_pcall(L, 2, LUA_MULTRET, 0);
 					if (ret != 0) {
@@ -323,27 +301,7 @@ dmExtension::Result UpdateTimerExtension(dmExtension::Params *params)
 					}
 				}
 
-				//
-
-				printf("\n");
 				lua_settop(L, top2);
-				// lua_getglobal(L, "vmath.vector3");      /* function to be called */
-				// lua_pushnumber(L, 0);                   /* push 1st argument */
-				// lua_pushnumber(L, 1);                   /* push 2nd argument */
-				// lua_pushnumber(L, 2);                   /* push 2nd argument */
-				//
-				// /* do the call (2 arguments, 1 result) */
-				// if (lua_pcall(L, 3, 1, 0) != 0)
-				//      printf("error running function `f': %s\n",
-				//             lua_tostring(L, -1));
-				//
-				// /* retrieve result */
-				// if (!lua_isuserdata(L, -1))
-				//      printf("function `f' must return a userdata\n");
-				// void *userdata = lua_touserdata(L, -1);
-				// printf("! %p\n", userdata);
-				// lua_pop(L, 1); /* pop returned value */
-				//
 			}
 			assert(top == lua_gettop(L));
 		}
