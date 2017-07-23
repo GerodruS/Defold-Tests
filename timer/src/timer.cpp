@@ -289,6 +289,18 @@ void PrintPosition(lua_State* L)
 	lua_settop(L, top);
 }
 
+void SetPosition(lua_State* L, int vectorIndex)
+{
+	const int top = lua_gettop(L);
+	lua_getglobal(L, "go");
+	lua_getfield(L, -1, "set_position");
+	lua_pushvalue(L, vectorIndex);
+	if (lua_pcall(L, 1, 0, 0) != 0) {
+		printf("error running function `f2': %s\n", lua_tostring(L, -1));
+	}
+	lua_settop(L, top);
+}
+
 dmExtension::Result UpdateTimerExtension(dmExtension::Params *params)
 {
 	const double currentTime = GetTimestamp();
@@ -342,6 +354,8 @@ dmExtension::Result UpdateTimerExtension(dmExtension::Params *params)
 						lua_pop(L, 1);
 					}
 				}
+
+				SetPosition(L, vectorindex);
 
 				lua_settop(L, top2);
 
