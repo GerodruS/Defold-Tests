@@ -37,12 +37,10 @@ static double GetTimestamp(void)
 struct Listener {
 	Listener()
 		: m_L(0)
-		, m_Callback(LUA_NOREF)
 		, m_Self(LUA_NOREF)
 	{
 	}
 	lua_State *	m_L;
-	int		m_Callback;
 	int		m_Self;
 };
 
@@ -112,13 +110,8 @@ static dmArray<Timer *> g_Timers;
  */
 static Listener CreateListener(lua_State *L, int index)
 {
-	luaL_checktype(L, index, LUA_TFUNCTION);
-	lua_pushvalue(L, index);
-	int cb = dmScript::Ref(L, LUA_REGISTRYINDEX);
-
 	Listener listener;
 	listener.m_L = dmScript::GetMainThread(L);
-	listener.m_Callback = cb;
 	dmScript::GetInstance(L);
 	listener.m_Self = dmScript::Ref(L, LUA_REGISTRYINDEX);
 	return listener;
@@ -336,30 +329,13 @@ dmExtension::Result UpdateTimerExtension(dmExtension::Params *params)
 				else
 					vectorindex = lua_gettop(L);
 
-				lua_rawgeti(L, LUA_REGISTRYINDEX, timer->listener.m_Callback);
 				lua_rawgeti(L, LUA_REGISTRYINDEX, timer->listener.m_Self);
 				lua_pushvalue(L, -1);
 				dmScript::SetInstance(L);
-				if (!dmScript::IsInstanceValid(L)) {
-					lua_pop(L, 2);
-				} else {
-					// lua_pushuse(L, movingObject.PositionX);
-					// lua_pushnumber(L, movingObject.PositionY);
-					lua_pushvalue(L, vectorindex);
-					// printf("x=%f y=%f\n", movingObject.PositionX, movingObject.PositionY);
-
-					int ret = lua_pcall(L, 2, LUA_MULTRET, 0);
-					if (ret != 0) {
-						dmLogError("Error running timer callback: %s", lua_tostring(L, -1));
-						lua_pop(L, 1);
-					}
-				}
 
 				SetPosition(L, vectorindex);
 
 				lua_settop(L, top2);
-
-				PrintPosition(L);
 			}
 			assert(top == lua_gettop(L));
 		}
