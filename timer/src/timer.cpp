@@ -197,6 +197,7 @@ dmExtension::Result UpdateTimerExtension(dmExtension::Params *params)
 {
 	const double currentTime = GetTimestamp();
 	const double dt = currentTime - g_PreviousTime;
+
 	g_PreviousTime = currentTime;
 
 	for (int i = g_Timers.Size() - 1; i >= 0; i--) {

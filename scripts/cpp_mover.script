@@ -1,0 +1,41 @@
+local min_x = 0
+local min_y = 0
+
+local max_x = 960
+local max_y = 640
+
+local min_velocity = 100
+local max_velocity = 300
+
+local function refresh_position(self, dt)
+  local position = go.get_position()
+  position = position + self.current_direction * dt
+
+  if position.x < min_x and self.current_direction.x < 0 then
+    self.current_direction.x = -self.current_direction.x
+  end
+  if max_x < position.x and 0 < self.current_direction.x then
+    self.current_direction.x = -self.current_direction.x
+  end
+  if position.y < min_y and self.current_direction.y < 0 then
+    self.current_direction.y = -self.current_direction.y
+  end
+  if max_y < position.y and 0 < self.current_direction.y then
+    self.current_direction.y = -self.current_direction.y
+  end
+
+  go.set_position(position)
+end
+
+function init(self)
+  self.current_direction = vmath.vector3(math.random() - 0.5, math.random() - 0.5, 0)
+  self.current_direction = vmath.normalize(self.current_direction) * math.random(min_velocity, max_velocity)
+
+  self.mover_id = timer.repeating(refresh_position)
+  print('init')
+end
+
+function final(self)
+  print('final')
+  timer.cancel(self.mover_id)
+end

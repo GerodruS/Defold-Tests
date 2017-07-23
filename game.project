@@ -2,7 +2,7 @@
 title = Defold-Test
 
 [bootstrap]
-main_collection = /main/sprites.collectionc
+main_collection = /main/cpp_moving.collectionc
 
 [display]
 variable_dt = 1
